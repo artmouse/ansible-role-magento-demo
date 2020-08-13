@@ -232,6 +232,8 @@ bin/magento cache:flush
 TFA_SECRET=""
 OTPAUTH_URL=""
 if [[ "${SHOULD_SETUP_TFA}" == "true" ]]; then
+  echo "----: Initialize TFA for admin user"
+  
   # Generate random secret for OTP use
   SECRET=$(pwgen -1 -s -n 32)
   # Detect Python version available - base32 encode and strip padding
