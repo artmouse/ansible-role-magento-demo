@@ -243,7 +243,7 @@ if [[ "${SHOULD_SETUP_TFA}" == "true" ]]; then
     TFA_SECRET=$(python -c "import base64; print base64.b32encode('${SECRET}')" | sed 's/=*$//')
   fi
   # Build otpauth URI
-  OTPAUTH_URL="otpauth://totp/${MAGENTO_DOMAIN}:${ADMIN_USER}?secret=${TFA_SECRET}&issuer=${MAGENTO_DOMAIN}&algorithm=SHA1&digits=6&period=30"
+  OTPAUTH_URL="otpauth://totp/${SITE_HOSTNAME}:${ADMIN_USER}?secret=${TFA_SECRET}&issuer=${SITE_HOSTNAME}&algorithm=SHA1&digits=6&period=30"
   
   # Set Google TFA as the forced provider
   bin/magento config:set twofactorauth/general/force_providers google
