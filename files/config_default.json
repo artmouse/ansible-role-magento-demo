@@ -42,5 +42,6 @@
   
   "PHP_MEMORY_LIMIT": "4096M",
   
-  "LOCK_DB_PREFIX": "data"
+  "LOCK_DB_PREFIX": "data",
+  "N98_MAGERUN2_BIN": "mr"
 }

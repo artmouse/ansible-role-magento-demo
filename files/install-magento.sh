@@ -84,6 +84,7 @@ declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add 
 declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.PHP_MEMORY_LIMIT')
 
 declare LOCK_DB_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.LOCK_DB_PREFIX')
+declare N98_MAGERUN2_BIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.N98_MAGERUN2_BIN')
 
 
 # Dynamic Variables
@@ -273,7 +274,7 @@ if [[ "${MAGENTO_DEMONOTICE}" == "1" ]]; then
   echo "----: Enabling Magento Demo Notice Banner"
   
   # Use MageRun2 to set env.php custom config value as config path is not identified
-  mr config:env:set system.default.design.head.demonotice 1
+  ${N98_MAGERUN2_BIN} config:env:set system.default.design.head.demonotice 1
 fi
 
 bin/magento app:config:import
