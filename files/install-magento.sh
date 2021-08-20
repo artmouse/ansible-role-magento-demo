@@ -53,6 +53,8 @@ declare MAGENTO_COMPOSER_PROJECT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq
 declare MAGENTO_REL_VER=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_REL_VER')
 declare MAGENTO_DEPLOY_MODE=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_DEPLOY_MODE')
 declare MAGENTO_FPC=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_FPC')
+declare MAGENTO_BACKEND_FRONTNAME=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_BACKEND_FRONTNAME')
+declare MAGENTO_DEMONOTICE=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_DEMONOTICE')
 
 declare REDIS_OBJ_HOST=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_OBJ_HOST')
 declare REDIS_OBJ_PORT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_OBJ_PORT')
@@ -81,6 +83,8 @@ declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add 
 
 declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.PHP_MEMORY_LIMIT')
 
+declare LOCK_DB_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.LOCK_DB_PREFIX')
+
 
 # Dynamic Variables
 COMPOSER_AUTH_USER=$(composer config -g http-basic.repo.magento.com | jq -r '.username')
@@ -92,7 +96,17 @@ DB_PASS=$(echo $(grep "^\s*password " ~/.my.cnf | cut -d= -f2 | perl -p -e 's/^\
 DB_NAME=$(echo $(grep "^\s*database " ~/.my.cnf | cut -d= -f2 | perl -p -e 's/^\s*(.*?)\s*$/$1/'))
 
 BASE_URL="https://${SITE_HOSTNAME}"
-BACKEND_FRONTNAME="backend"
+
+BACKEND_FRONTNAME="admin"
+if [[ "${MAGENTO_BACKEND_FRONTNAME}" == "" ]]; then
+  echo "----: Generating Backend Frontname"
+  BACKEND_FRONTNAME="admin_$(printf "%s%s%s" \
+      $(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 6 | head -n1))"
+  echo "BACKEND_FRONTNAME: ${BACKEND_FRONTNAME}"
+else
+  echo "----: Overriding Generated Backend Frontname From Config"
+  BACKEND_FRONTNAME="${MAGENTO_BACKEND_FRONTNAME}"
+fi
 
 ADMIN_USER="admin_$(printf "%s%s%s" \
     $(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-z0-9' | fold -w 6 | head -n1))"
@@ -105,7 +119,6 @@ ADMIN_PASS="$(printf "%s%s%s%s%s" \
     $(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 11 | head -n1) \
     $(cat /dev/urandom | env LC_CTYPE=C tr -dc '0-9' | fold -w 2 | head -n1) \
     $(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n1))"
-ADMIN_URL="${BASE_URL}/${BACKEND_FRONTNAME}/admin"
 
 # Setup Directories
 mkdir -p ${MAGENTO_ROOT_DIR}
@@ -180,7 +193,8 @@ ${MAGENTO_INSTALL_OPTIONS} \
   --page-cache-redis-port=${REDIS_FPC_PORT} \
   --page-cache-redis-db=${REDIS_FPC_DB} \
   --http-cache-hosts=${VARNISH_HOST}:${VARNISH_PORT} \
-  --magento-init-params=MAGE_MODE=production
+  --lock-db-prefix=${LOCK_DB_PREFIX} \
+  --magento-init-params=MAGE_MODE=${MAGENTO_DEPLOY_MODE}
 SHELL_COMMAND
 )
 
@@ -255,7 +269,12 @@ fi
 
 bin/magento config:set --lock-env admin/security/session_lifetime 28800
 
-
+if [[ "${MAGENTO_DEMONOTICE}" == "1" ]]; then
+  echo "----: Enabling Magento Demo Notice Banner"
+  
+  # Use MageRun2 to set env.php custom config value as config path is not identified
+  mr config:env:set system.default.design.head.demonotice 1
+fi
 
 bin/magento app:config:import
 bin/magento cache:enable
