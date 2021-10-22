@@ -86,6 +86,10 @@ declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add 
 declare LOCK_DB_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.LOCK_DB_PREFIX')
 declare N98_MAGERUN2_BIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.N98_MAGERUN2_BIN')
 
+if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" && "$SHOULD_SETUP_SAMPLE_DATA" == "true" ]]; then
+    echo "----: PWA sample data cannot be installed with Magento Sample Data, you need to set 'SHOULD_SETUP_SAMPLE_DATA' to 'false' before installing Venia Sample Data"
+    exit -1
+fi
 
 # Dynamic Variables
 COMPOSER_AUTH_USER=$(composer config -g http-basic.repo.magento.com | jq -r '.username')
@@ -275,6 +279,15 @@ if [[ "${MAGENTO_DEMONOTICE}" == "1" ]]; then
   
   # Use MageRun2 to set env.php custom config value as config path is not identified
   ${N98_MAGERUN2_BIN} config:env:set system.default.design.head.demonotice 1
+fi
+
+# Conditionally install Venia sample data for PWA
+if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
+  echo "----: Installing Venia Sample Data for PWA"
+  curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v12.0.0/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
+
+  bin/magento setup:upgrade
+  bin/magento indexer:reindex
 fi
 
 bin/magento app:config:import

@@ -37,6 +37,7 @@
   "ELASTIC_INDEX_PREFIX": "data_magento2",
   
   "SHOULD_SETUP_SAMPLE_DATA": "true",
+  "SHOULD_SETUP_VENIA_SAMPLE_DATA": "false",
   "SHOULD_RUN_CUSTOM_SCRIPT": "false",
   "SHOULD_SETUP_TFA": "false",
   
