@@ -207,7 +207,7 @@ SHELL_COMMAND
 # Display command
 echo "php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}"
 # Execute bin/magento setup:install
-echo "php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}" | bash
+php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}
 
 # Configure Magento
 echo "----: Magento Configuration Settings"
