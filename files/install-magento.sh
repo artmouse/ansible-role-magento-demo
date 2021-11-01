@@ -81,6 +81,7 @@ declare SHOULD_SETUP_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq
 declare SHOULD_SETUP_VENIA_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_VENIA_SAMPLE_DATA')
 declare SHOULD_RUN_CUSTOM_SCRIPT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_RUN_CUSTOM_SCRIPT')
 declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_TFA')
+declare VENIA_SAMPLE_DATA_VERSION=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_VERSION')
 
 declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.PHP_MEMORY_LIMIT')
 
@@ -285,7 +286,7 @@ fi
 # Conditionally install Venia sample data for PWA
 if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
   echo "----: Installing Venia Sample Data for PWA"
-  curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v12.0.0/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
+  curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
 
   bin/magento setup:upgrade
   bin/magento indexer:reindex

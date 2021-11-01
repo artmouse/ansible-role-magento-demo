@@ -51,6 +51,30 @@ None.
       roles:
         - { role: classyllama.magento-demo }
 
+  For optional PWA installation it is possible to define Venia Sample Data installation using the following variables:
+
+    - hosts: all
+      vars:
+        magento_demo_config_overrides:
+          magento_demo_hostname: example.lan
+          magento_demo_env_root: /var/www/data
+          magento_demo_magento_root: /var/www/data/magento
+          magento_demo_user: www-data
+          magento_demo_group: www-data
+
+          MAGENTO_COMPOSER_PROJECT: magento/project-community-edition
+          SHOULD_SETUP_TFA: "true"
+          ...
+          SHOULD_SETUP_SAMPLE_DATA: "false"
+          SHOULD_SETUP_VENIA_SAMPLE_DATA: "true"
+          VENIA_SAMPLE_DATA_VERSION: "12.0.0"
+          ...
+      roles:
+        - { role: classyllama.magento-demo }
+
+  Please note, Magento Sample data should be disabled during Venia Sample data installation.
+
+
 ## Script Usage
 
     # Once the scripts are on the server
