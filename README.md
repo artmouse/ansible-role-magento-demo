@@ -21,15 +21,15 @@ None.
     - hosts: all
       vars:
         magento_demo_config_overrides:
-          magento_demo_hostname: example.lan
-          magento_demo_env_root: /var/www/data
-          magento_demo_magento_root: /var/www/data/magento
-          magento_demo_user: www-data
-          magento_demo_group: www-data
-          
+        magento_demo_hostname: example.lan
+        magento_demo_env_root: /var/www/data
+        magento_demo_magento_root: /var/www/data/magento
+        magento_demo_user: www-data
+        magento_demo_group: www-data
+
+        magento_demo_config_overrides:
           MAGENTO_COMPOSER_PROJECT: magento/project-community-edition
           SHOULD_SETUP_TFA: "true"
-          
           MAGENTO_REL_VER: 2.4.3
           REDIS_OBJ_HOST: "localhost"
           REDIS_OBJ_PORT: "6379"
@@ -56,12 +56,13 @@ None.
     - hosts: all
       vars:
         magento_demo_config_overrides:
-          magento_demo_hostname: example.lan
-          magento_demo_env_root: /var/www/data
-          magento_demo_magento_root: /var/www/data/magento
-          magento_demo_user: www-data
-          magento_demo_group: www-data
+        magento_demo_hostname: example.lan
+        magento_demo_env_root: /var/www/data
+        magento_demo_magento_root: /var/www/data/magento
+        magento_demo_user: www-data
+        magento_demo_group: www-data
 
+        magento_demo_config_overrides:
           MAGENTO_COMPOSER_PROJECT: magento/project-community-edition
           SHOULD_SETUP_TFA: "true"
           ...
