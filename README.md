@@ -51,7 +51,7 @@ None.
       roles:
         - { role: classyllama.magento-demo }
 
-  For optional PWA installation it is possible to define Venia Sample Data installation using the following variables:
+  For optional PWA installation it is possible to include [Venia Sample Data](https://magento.github.io/pwa-studio/venia-pwa-concept/install-sample-data/) installation using the following variables:
 
     - hosts: all
       vars:
