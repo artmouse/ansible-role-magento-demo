@@ -69,6 +69,7 @@ None.
           SHOULD_SETUP_SAMPLE_DATA: "false"
           SHOULD_SETUP_VENIA_SAMPLE_DATA: "true"
           VENIA_SAMPLE_DATA_VERSION: "12.0.0"
+          REDIS_SES_DISABLE_LOCKING: "1"
           ...
       roles:
         - { role: classyllama.magento-demo }
