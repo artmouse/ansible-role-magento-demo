@@ -295,11 +295,29 @@ fi
 
 # Conditionally install Venia sample data for PWA
 if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
-  echo "----: Installing Venia Sample Data for PWA"
-  curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
 
+  echo "----: Installing Venia Sample Data for PWA"
+  # curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
+  
+  SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+  mkdir -p ${MAGENTO_ROOT_DIR}/artifacts
+  unzip ${SCRIPT_DIR}/venia-sample-data-modules-main.zip -d ${MAGENTO_ROOT_DIR}/artifacts
+  composer config --no-interaction --ansi repositories.venia-sample-data-modules-main path "./artifacts/venia-sample-data-modules-main/*"
+  composer config minimum-stability dev
+  composer require --no-interaction --ansi magento/venia-sample-data
+  
+  # https://magento.github.io/pwa-studio/venia-pwa-concept/install-sample-data/
+  # composer config --no-interaction --ansi repositories.venia-sample-data composer https://repo.magento.com
+  # composer require --no-interaction --ansi magento/venia-sample-data:0.0.1
+  
+  echo "----: Running setup:upgrade"
   bin/magento setup:upgrade
+  echo "----: Reindexing"
+  bin/magento indexer:status
+  bin/magento indexer:reset
   bin/magento indexer:reindex
+  echo "----: Finished Reindex"
+  
 fi
 
 
