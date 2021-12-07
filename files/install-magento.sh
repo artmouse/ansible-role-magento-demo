@@ -354,6 +354,13 @@ echo "${ADMIN_CREDENTIALS}" > ${ENV_ROOT_DIR}/magento_admin_credentials.json
 
 cat ${ENV_ROOT_DIR}/magento_admin_credentials.json | jq .
 
+echo "----: TFA OTP code script"
+echo '
+oathtool --time-step-size=30 --window=0 --totp=sha1 --base32 "$(cat magento_admin_credentials.json | jq -r .admin_tfa_secret)"
+' > ${ENV_ROOT_DIR}/magento_tfa_otp_code.sh
+chmod +x ${ENV_ROOT_DIR}/magento_tfa_otp_code.sh
+
+
 # Custom script
 if [[ "${SHOULD_RUN_CUSTOM_SCRIPT}" == "true" ]]; then
   # CONFIG_NAME
