@@ -44,6 +44,7 @@ CONFIG_OVERRIDE="${CONFIG_FILE}"
 # Read merged config JSON files
 declare CONFIG_NAME=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.CONFIG_NAME')
 declare SITE_HOSTNAME=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SITE_HOSTNAME')
+declare SITE_ADMIN_DOMAIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SITE_ADMIN_DOMAIN')
 
 declare ENV_ROOT_DIR=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.ENV_ROOT_DIR')
 declare MAGENTO_ROOT_DIR=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_ROOT_DIR')
@@ -84,6 +85,7 @@ declare ELASTIC_INDEX_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s 
 declare SHOULD_SETUP_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_SAMPLE_DATA')
 declare SHOULD_SETUP_VENIA_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_VENIA_SAMPLE_DATA')
 declare SHOULD_RUN_CUSTOM_SCRIPT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_RUN_CUSTOM_SCRIPT')
+declare SHOULD_USE_CUSTOM_ADMIN_DOMAIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_USE_CUSTOM_ADMIN_DOMAIN')
 declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_TFA')
 declare VENIA_SAMPLE_DATA_VERSION=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_VERSION')
 
@@ -300,7 +302,37 @@ if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
   bin/magento indexer:reindex
 fi
 
+
+
+
+# Conditionally set custom admin domain
+ADMIN_BASE_URL="https://${SITE_HOSTNAME}"
+if [[ "$SHOULD_USE_CUSTOM_ADMIN_DOMAIN" == "true" ]]; then
+
+  echo "----: Running admin at separate domain"
+  # Enforce base_url redirect
+  bin/magento config:set --lock-env web/url/redirect_to_base 1
+
+  # Admin
+  ADMIN_BASE_URL="https://${SITE_ADMIN_DOMAIN}"
+  bin/magento config:set --lock-env admin/url/custom ${ADMIN_BASE_URL}/
+  bin/magento config:set --lock-env admin/url/use_custom 1
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_link_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_link_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_static_url ${ADMIN_BASE_URL}/static/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_static_url ${ADMIN_BASE_URL}/static/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_media_url ${ADMIN_BASE_URL}/media/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_media_url ${ADMIN_BASE_URL}/media/
+
+fi
+
+
+
+echo "----: Import configs"
 bin/magento app:config:import
+echo "----: Enable cache and flush"
 bin/magento cache:enable
 bin/magento cache:flush
 
@@ -342,7 +374,7 @@ ADMIN_CREDENTIALS=$(cat <<CONTENTS_HEREDOC
 {
   "install_path": "${MAGENTO_ROOT_DIR}",
   "base_url": "${BASE_URL}",
-  "admin_url": "${BASE_URL}/${BACKEND_FRONTNAME}",
+  "admin_url": "${ADMIN_BASE_URL}/${BACKEND_FRONTNAME}",
   "admin_user": "${ADMIN_USER}",
   "admin_pass": "${ADMIN_PASS}",
   "admin_tfa_secret": "${TFA_SECRET}",
