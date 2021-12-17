@@ -88,6 +88,7 @@ declare SHOULD_RUN_CUSTOM_SCRIPT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq
 declare SHOULD_USE_CUSTOM_ADMIN_DOMAIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_USE_CUSTOM_ADMIN_DOMAIN')
 declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_TFA')
 declare VENIA_SAMPLE_DATA_VERSION=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_VERSION')
+declare VENIA_SAMPLE_DATA_FROM=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_FROM')
 
 declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.PHP_MEMORY_LIMIT')
 
@@ -297,18 +298,29 @@ fi
 if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
 
   echo "----: Installing Venia Sample Data for PWA"
-  # curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
   
-  SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-  mkdir -p ${MAGENTO_ROOT_DIR}/artifacts
-  unzip ${SCRIPT_DIR}/venia-sample-data-modules-main.zip -d ${MAGENTO_ROOT_DIR}/artifacts
-  composer config --no-interaction --ansi repositories.venia-sample-data-modules-main path "./artifacts/venia-sample-data-modules-main/*"
-  composer config minimum-stability dev
-  composer require --no-interaction --ansi magento/venia-sample-data
+  echo "----: Running setup:upgrade"
+  bin/magento setup:upgrade
   
-  # https://magento.github.io/pwa-studio/venia-pwa-concept/install-sample-data/
-  # composer config --no-interaction --ansi repositories.venia-sample-data composer https://repo.magento.com
-  # composer require --no-interaction --ansi magento/venia-sample-data:0.0.1
+  if [[ "${VENIA_SAMPLE_DATA_FROM}" == "GITHUB" ]]
+  then
+    echo "----: Installing Venia Sample Data from GITHUB script"
+      curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
+  elif [[ "${VENIA_SAMPLE_DATA_FROM}" == "ARTIFACT" ]]
+  then
+    echo "----: Installing Venia Sample Data from ARTIFACT via composer"
+    SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+    mkdir -p ${MAGENTO_ROOT_DIR}/artifacts
+    unzip ${SCRIPT_DIR}/venia-sample-data-modules-main.zip -d ${MAGENTO_ROOT_DIR}/artifacts
+    composer config --no-interaction --ansi repositories.venia-sample-data-modules-main path "./artifacts/venia-sample-data-modules-main/*"
+    composer config minimum-stability dev
+    composer require --no-interaction --ansi magento/venia-sample-data
+  else
+    echo "----: Installing Venia Sample Data from repo.magento.com via composer"
+    # https://magento.github.io/pwa-studio/venia-pwa-concept/install-sample-data/
+    composer config --no-interaction --ansi repositories.venia-sample-data composer https://repo.magento.com
+    composer require --no-interaction --ansi magento/venia-sample-data:0.0.1
+  fi
   
   echo "----: Running setup:upgrade"
   bin/magento setup:upgrade
