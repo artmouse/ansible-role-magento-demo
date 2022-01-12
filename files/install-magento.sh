@@ -44,6 +44,7 @@ CONFIG_OVERRIDE="${CONFIG_FILE}"
 # Read merged config JSON files
 declare CONFIG_NAME=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.CONFIG_NAME')
 declare SITE_HOSTNAME=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SITE_HOSTNAME')
+declare SITE_ADMIN_DOMAIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SITE_ADMIN_DOMAIN')
 
 declare ENV_ROOT_DIR=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.ENV_ROOT_DIR')
 declare MAGENTO_ROOT_DIR=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.MAGENTO_ROOT_DIR')
@@ -62,6 +63,10 @@ declare REDIS_OBJ_DB=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq
 declare REDIS_SES_HOST=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_HOST')
 declare REDIS_SES_PORT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_PORT')
 declare REDIS_SES_DB=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_DB')
+declare REDIS_SES_MAX_CONCURRENCY=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_MAX_CONCURRENCY')
+declare REDIS_SES_BREAK_AFTER_FRONT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_BREAK_AFTER_FRONT')
+declare REDIS_SES_BREAK_AFTER_ADMIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_BREAK_AFTER_ADMIN')
+declare REDIS_SES_DISABLE_LOCKING=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_SES_DISABLE_LOCKING')
 declare REDIS_FPC_HOST=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_FPC_HOST')
 declare REDIS_FPC_PORT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_FPC_PORT')
 declare REDIS_FPC_DB=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.REDIS_FPC_DB')
@@ -78,14 +83,22 @@ declare ELASTIC_PASSWORD=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add 
 declare ELASTIC_INDEX_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.ELASTIC_INDEX_PREFIX')
 
 declare SHOULD_SETUP_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_SAMPLE_DATA')
+declare SHOULD_SETUP_VENIA_SAMPLE_DATA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_VENIA_SAMPLE_DATA')
 declare SHOULD_RUN_CUSTOM_SCRIPT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_RUN_CUSTOM_SCRIPT')
+declare SHOULD_USE_CUSTOM_ADMIN_DOMAIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_USE_CUSTOM_ADMIN_DOMAIN')
 declare SHOULD_SETUP_TFA=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.SHOULD_SETUP_TFA')
+declare VENIA_SAMPLE_DATA_VERSION=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_VERSION')
+declare VENIA_SAMPLE_DATA_FROM=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.VENIA_SAMPLE_DATA_FROM')
 
 declare PHP_MEMORY_LIMIT=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.PHP_MEMORY_LIMIT')
 
 declare LOCK_DB_PREFIX=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.LOCK_DB_PREFIX')
 declare N98_MAGERUN2_BIN=$(cat ${CONFIG_DEFAULT} ${CONFIG_OVERRIDE} | jq -s add | jq -r '.N98_MAGERUN2_BIN')
 
+if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" && "$SHOULD_SETUP_SAMPLE_DATA" == "true" ]]; then
+    echo "----: PWA sample data cannot be installed with Magento Sample Data, you need to set 'SHOULD_SETUP_SAMPLE_DATA' to 'false' before installing Venia Sample Data"
+    exit -1
+fi
 
 # Dynamic Variables
 COMPOSER_AUTH_USER=$(composer config -g http-basic.repo.magento.com | jq -r '.username')
@@ -185,6 +198,10 @@ ${MAGENTO_INSTALL_OPTIONS} \
   --session-save-redis-host=${REDIS_SES_HOST} \
   --session-save-redis-port=${REDIS_SES_PORT} \
   --session-save-redis-db=${REDIS_SES_DB} \
+  --session-save-redis-max-concurrency=${REDIS_SES_MAX_CONCURRENCY} \
+  --session-save-redis-break-after-frontend=${REDIS_SES_BREAK_AFTER_FRONT} \
+  --session-save-redis-break-after-adminhtml=${REDIS_SES_BREAK_AFTER_ADMIN} \
+  --session-save-redis-disable-locking=${REDIS_SES_DISABLE_LOCKING} \
   --cache-backend=redis \
   --cache-backend-redis-server=${REDIS_OBJ_HOST} \
   --cache-backend-redis-port=${REDIS_OBJ_PORT} \
@@ -202,7 +219,7 @@ SHELL_COMMAND
 # Display command
 echo "php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}"
 # Execute bin/magento setup:install
-echo "php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}" | bash
+php -d memory_limit=${PHP_MEMORY_LIMIT} bin/magento setup:install ${MAGENTO_INSTALL_OPTIONS}
 
 # Configure Magento
 echo "----: Magento Configuration Settings"
@@ -277,7 +294,75 @@ if [[ "${MAGENTO_DEMONOTICE}" == "1" ]]; then
   ${N98_MAGERUN2_BIN} config:env:set system.default.design.head.demonotice 1
 fi
 
+# Conditionally install Venia sample data for PWA
+if [[ "$SHOULD_SETUP_VENIA_SAMPLE_DATA" == "true" ]]; then
+
+  echo "----: Installing Venia Sample Data for PWA"
+  
+  echo "----: Running setup:upgrade"
+  bin/magento setup:upgrade
+  
+  if [[ "${VENIA_SAMPLE_DATA_FROM}" == "GITHUB" ]]
+  then
+    echo "----: Installing Venia Sample Data from GITHUB script"
+      curl -LsS https://raw.githubusercontent.com/magento/pwa-studio/v${VENIA_SAMPLE_DATA_VERSION}/packages/venia-concept/deployVeniaSampleData.sh | bash -s -- --yes
+  elif [[ "${VENIA_SAMPLE_DATA_FROM}" == "ARTIFACT" ]]
+  then
+    echo "----: Installing Venia Sample Data from ARTIFACT via composer"
+    SCRIPT_DIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+    mkdir -p ${MAGENTO_ROOT_DIR}/artifacts
+    unzip ${SCRIPT_DIR}/venia-sample-data-modules-main.zip -d ${MAGENTO_ROOT_DIR}/artifacts
+    composer config --no-interaction --ansi repositories.venia-sample-data-modules-main path "./artifacts/venia-sample-data-modules-main/*"
+    composer config minimum-stability dev
+    composer require --no-interaction --ansi magento/venia-sample-data
+  else
+    echo "----: Installing Venia Sample Data from repo.magento.com via composer"
+    # https://magento.github.io/pwa-studio/venia-pwa-concept/install-sample-data/
+    composer config --no-interaction --ansi repositories.venia-sample-data composer https://repo.magento.com
+    composer require --no-interaction --ansi magento/venia-sample-data:0.0.1
+  fi
+  
+  echo "----: Running setup:upgrade"
+  bin/magento setup:upgrade
+  echo "----: Reindexing"
+  bin/magento indexer:status
+  bin/magento indexer:reset
+  bin/magento indexer:reindex
+  echo "----: Finished Reindex"
+  
+fi
+
+
+
+
+# Conditionally set custom admin domain
+ADMIN_BASE_URL="https://${SITE_HOSTNAME}"
+if [[ "$SHOULD_USE_CUSTOM_ADMIN_DOMAIN" == "true" ]]; then
+
+  echo "----: Running admin at separate domain"
+  # Enforce base_url redirect
+  bin/magento config:set --lock-env web/url/redirect_to_base 1
+
+  # Admin
+  ADMIN_BASE_URL="https://${SITE_ADMIN_DOMAIN}"
+  bin/magento config:set --lock-env admin/url/custom ${ADMIN_BASE_URL}/
+  bin/magento config:set --lock-env admin/url/use_custom 1
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_link_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_link_url ${ADMIN_BASE_URL}/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_static_url ${ADMIN_BASE_URL}/static/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_static_url ${ADMIN_BASE_URL}/static/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/unsecure/base_media_url ${ADMIN_BASE_URL}/media/
+  bin/magento config:set --scope=store --scope-code=admin --lock-env web/secure/base_media_url ${ADMIN_BASE_URL}/media/
+
+fi
+
+
+
+echo "----: Import configs"
 bin/magento app:config:import
+echo "----: Enable cache and flush"
 bin/magento cache:enable
 bin/magento cache:flush
 
@@ -319,7 +404,7 @@ ADMIN_CREDENTIALS=$(cat <<CONTENTS_HEREDOC
 {
   "install_path": "${MAGENTO_ROOT_DIR}",
   "base_url": "${BASE_URL}",
-  "admin_url": "${BASE_URL}/${BACKEND_FRONTNAME}",
+  "admin_url": "${ADMIN_BASE_URL}/${BACKEND_FRONTNAME}",
   "admin_user": "${ADMIN_USER}",
   "admin_pass": "${ADMIN_PASS}",
   "admin_tfa_secret": "${TFA_SECRET}",
@@ -330,6 +415,13 @@ CONTENTS_HEREDOC
 echo "${ADMIN_CREDENTIALS}" > ${ENV_ROOT_DIR}/magento_admin_credentials.json
 
 cat ${ENV_ROOT_DIR}/magento_admin_credentials.json | jq .
+
+echo "----: TFA OTP code script"
+echo '
+oathtool --time-step-size=30 --window=0 --totp=sha1 --base32 "$(cat magento_admin_credentials.json | jq -r .admin_tfa_secret)"
+' > ${ENV_ROOT_DIR}/magento_tfa_otp_code.sh
+chmod +x ${ENV_ROOT_DIR}/magento_tfa_otp_code.sh
+
 
 # Custom script
 if [[ "${SHOULD_RUN_CUSTOM_SCRIPT}" == "true" ]]; then
