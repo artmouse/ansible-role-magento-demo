@@ -149,9 +149,15 @@ composer create-project \
   -s stable \
   --no-interaction \
   --prefer-dist \
-  --no-dev
+  --no-dev \
+  --no-install
 echo
+composer config allow-plugins.magento/* true
+composer config allow-plugins.laminas/laminas-dependency-plugin true
+composer config allow-plugins.cweagans/composer-patches true
+composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 composer config -a http-basic.repo.magento.com ${COMPOSER_AUTH_USER} ${COMPOSER_AUTH_PASS}
+composer install
 chmod +x bin/magento
 
 # Conditionally install sample data
